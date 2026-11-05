@@ -1,0 +1,126 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class GameState : MonoBehaviour
+{
+    [SerializeField, Range(0, 100)]
+    private int energy = 100;
+
+    [SerializeField, Range(0, 100)]
+    private int mood = 100;
+
+    [SerializeField, Range(0, 100)]
+    private int satiety = 100;
+
+    [SerializeField, Range(0, 100)]
+    private int courseProgress;
+
+    //金钱系统
+    [SerializeField, Min(0)]
+    private int money = 0;
+
+    [SerializeField, Min(0)]
+    private int totalMinutes = 480;
+
+    public int Energy => energy;
+    public int Mood => mood;
+    public int Satiety => satiety;
+    public int CourseProgress => courseProgress;
+
+    //钱
+    public int Money => money;
+    public int TotalMinutes => totalMinutes;
+
+    public event Action Changed;
+
+    //钱
+    public void AddMoney(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        money += amount;
+        Changed?.Invoke();
+    }
+    //体力，钱 和人的交互
+    public bool TryMuseumWork(out string message)
+    {
+        const int energyCost = 20;
+        const int wage = 8;
+
+        if (energy < energyCost)
+        {
+            message = "Not enough energy! You need 20.";
+            return false;
+        }
+
+        energy -= energyCost;
+        AddMoney(wage);
+
+        message = "Work finished! Energy -20, Money +£8.";
+        return true;
+    }
+
+    public bool TryStudy(out string message)
+    {
+        if (courseProgress >= 100)
+        {
+            message = "Course completed!";
+            return false;
+        }
+
+        var warnings = new List<string>();
+
+        if (energy < 15)
+            warnings.Add("You need rest.");
+
+        if (mood < 5)
+            warnings.Add("You need to improve your mood.");
+
+        if (satiety < 10)
+            warnings.Add("You need food.");
+
+        if (warnings.Count > 0)
+        {
+            message = string.Join("\n", warnings);
+            return false;
+        }
+
+        // 所有条件满足后，才统一结算。
+        energy = Mathf.Clamp(energy - 15, 0, 100);
+        mood = Mathf.Clamp(mood - 5, 0, 100);
+        satiety = Mathf.Clamp(satiety - 10, 0, 100);
+
+        courseProgress = Mathf.Min(courseProgress + 10, 100);
+        totalMinutes += 120;
+
+        message =
+            courseProgress >= 100
+                ? "Study completed! Course completed!"
+                : "Study completed! Progress +10%.";
+
+        Changed?.Invoke();
+        return true;
+    }
+
+    public bool TrySleep(out string message)
+    {
+        if (satiety < 20)
+        {
+            message = "You need food before sleeping.";
+            return false;
+        }
+
+        energy = Mathf.Clamp(energy + 60, 0, 100);
+        mood = Mathf.Clamp(mood + 15, 0, 100);
+        satiety = Mathf.Clamp(satiety - 20, 0, 100);
+
+        totalMinutes += 8 * 60;
+
+        message = "Rested! Leave the bed area to sleep again.";
+
+        Changed?.Invoke();
+        return true;
+    }
+}
