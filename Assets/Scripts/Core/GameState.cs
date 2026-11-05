@@ -34,6 +34,40 @@ public class GameState : MonoBehaviour
 
     public event Action Changed;
 
+    // Shared by activities that spend resources and advance the game clock.
+    // Validate everything before applying any changes, then refresh the HUD once.
+    public bool TryConsumeResources(
+        int energyCost,
+        int satietyCost,
+        int minutes,
+        out string message)
+    {
+        if (energyCost < 0 || satietyCost < 0 || minutes < 0)
+        {
+            message = "Resource costs and time must not be negative.";
+            return false;
+        }
+
+        if (energy < energyCost)
+        {
+            message = $"Not enough energy. You need {energyCost}.";
+            return false;
+        }
+
+        if (satiety < satietyCost)
+        {
+            message = $"You need food first. At least {satietyCost} satiety is required.";
+            return false;
+        }
+
+        energy -= energyCost;
+        satiety -= satietyCost;
+        totalMinutes += minutes;
+        message = "Activity started.";
+        Changed?.Invoke();
+        return true;
+    }
+
     //钱
     public void AddMoney(int amount)
     {
