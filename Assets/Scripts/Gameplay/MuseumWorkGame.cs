@@ -12,7 +12,12 @@ public class MuseumWorkGame : MonoBehaviour
     public const int WorkMinutes = 120;
     public const int QuestionCount = 3;
     public const int BasePay = 12;
-    public const int CorrectBonus = 4;
+    private static readonly (string Name, int SecondsOffset, int Bonus)[] Difficulties =
+    {
+        ("Easy", 6, 3),
+        ("Normal", 0, 4),
+        ("Hard", -4, 6),
+    };
 
     public bool IsOpen => phase != Phase.Closed;
 
@@ -84,7 +89,7 @@ public class MuseumWorkGame : MonoBehaviour
         {
             title = "Avant Armour",
             description =
-                "Made in Milan, Italy, around 1440-1445. An early example of European plate armour.",
+                "Early plate armour made in Milan, Italy, around 1440-1445.",
             question = "A visitor asks: Which city was the Avant Armour made in?",
             correctAnswer = "Milan",
             wrongAnswerOne = "Paris",
@@ -94,7 +99,7 @@ public class MuseumWorkGame : MonoBehaviour
         {
             title = "Alexander Reid",
             description =
-                "A portrait painted by Vincent van Gogh in 1887. Alexander Reid was an art dealer.",
+                "Vincent van Gogh painted art dealer Alexander Reid in 1887.",
             question = "A visitor asks: Who painted the portrait of Alexander Reid?",
             correctAnswer = "Vincent van Gogh",
             wrongAnswerOne = "Claude Monet",
@@ -104,7 +109,7 @@ public class MuseumWorkGame : MonoBehaviour
         {
             title = "Shabti",
             description =
-                "A small funerary figurine from ancient Egypt. Glasgow Museums holds examples of these figures.",
+                "A small funerary figurine from ancient Egypt.",
             question = "A visitor asks: Which ancient civilisation made shabti figurines?",
             correctAnswer = "Ancient Egypt",
             wrongAnswerOne = "Ancient Rome",
@@ -115,6 +120,7 @@ public class MuseumWorkGame : MonoBehaviour
     private enum Phase
     {
         Closed,
+        Difficulty,
         Offer,
         Memorise,
         Question,
@@ -126,7 +132,12 @@ public class MuseumWorkGame : MonoBehaviour
     private Phase phase;
     private Phase phaseBeforeAbort;
     private float remainingSeconds;
-    private readonly int[] questionOrder = { 0, 1, 2 };
+    private GuideFact[] shuffledFacts;
+    private int difficultyIndex;
+    private int AnswerBonus => Difficulties[difficultyIndex].Bonus;
+
+    private float StudySeconds(int index) =>
+        Mathf.Max(1f, memoriseSeconds + Difficulties[index].SecondsOffset);
     private readonly string[] choices = new string[3];
     private int questionIndex;
     private int correctChoiceIndex;
@@ -157,7 +168,7 @@ public class MuseumWorkGame : MonoBehaviour
         {
             int choice = i;
             if (answerButtons[i] != null)
-                answerButtons[i].onClick.AddListener(() => Answer(choice));
+                answerButtons[i].onClick.AddListener(() => SelectOption(choice));
         }
     }
 
@@ -192,6 +203,8 @@ public class MuseumWorkGame : MonoBehaviour
                 ResumeShift();
             else if (HasActiveShift)
                 ConfirmAbort();
+            else if (phase == Phase.Offer)
+                ReturnToDifficulty();
             else
                 ClosePanel();
         }
@@ -214,7 +227,12 @@ public class MuseumWorkGame : MonoBehaviour
             reception.CloseMenu();
         ownsMovementLock = true;
         playerMovement.enabled = false;
-        phase = Phase.Offer;
+        ReturnToDifficulty();
+    }
+
+    private void ReturnToDifficulty()
+    {
+        phase = Phase.Difficulty;
         Render();
     }
 
@@ -233,7 +251,7 @@ public class MuseumWorkGame : MonoBehaviour
             || primaryButton == null
             || secondaryButton == null
             || facts == null
-            || facts.Length != QuestionCount
+            || facts.Length < QuestionCount
             || answerButtons.Length != 3
             || factTitles.Length != 3
             || factDescriptions.Length != 3
@@ -241,13 +259,27 @@ public class MuseumWorkGame : MonoBehaviour
             return false;
         for (int i = 0; i < 3; i++)
             if (
-                facts[i] == null
-                || answerButtons[i] == null
+                answerButtons[i] == null
                 || factTitles[i] == null
                 || factDescriptions[i] == null
             )
                 return false;
+        foreach (GuideFact fact in facts)
+            if (fact == null)
+                return false;
         return true;
+    }
+
+    private void SelectOption(int index)
+    {
+        if (phase == Phase.Difficulty)
+        {
+            difficultyIndex = index;
+            phase = Phase.Offer;
+            Render();
+        }
+        else
+            Answer(index);
     }
 
     private void StartShift()
@@ -268,33 +300,33 @@ public class MuseumWorkGame : MonoBehaviour
         earnedWage = 0;
         correctAnswers = 0;
         questionIndex = 0;
-        for (int i = 0; i < questionOrder.Length; i++)
-            questionOrder[i] = i;
-        for (int i = questionOrder.Length - 1; i > 0; i--)
-        {
-            int other = UnityEngine.Random.Range(0, i + 1);
-            (questionOrder[i], questionOrder[other]) = (questionOrder[other], questionOrder[i]);
-        }
-        remainingSeconds = memoriseSeconds;
+        shuffledFacts = (GuideFact[])facts.Clone();
+        Shuffle(shuffledFacts);
+        remainingSeconds = StudySeconds(difficultyIndex);
         phase = Phase.Memorise;
         Render();
     }
 
     private void PrepareQuestion()
     {
-        GuideFact fact = facts[questionOrder[questionIndex]];
+        GuideFact fact = shuffledFacts[questionIndex];
         choices[0] = fact.correctAnswer;
         choices[1] = fact.wrongAnswerOne;
         choices[2] = fact.wrongAnswerTwo;
-        for (int i = choices.Length - 1; i > 0; i--)
-        {
-            int other = UnityEngine.Random.Range(0, i + 1);
-            (choices[i], choices[other]) = (choices[other], choices[i]);
-        }
+        Shuffle(choices);
         correctChoiceIndex = Array.IndexOf(choices, fact.correctAnswer);
         selectedChoiceIndex = -1;
         phase = Phase.Question;
         Render();
+    }
+
+    private static void Shuffle<T>(T[] items)
+    {
+        for (int i = items.Length - 1; i > 0; i--)
+        {
+            int other = UnityEngine.Random.Range(0, i + 1);
+            (items[i], items[other]) = (items[other], items[i]);
+        }
     }
 
     private void Answer(int index)
@@ -318,7 +350,7 @@ public class MuseumWorkGame : MonoBehaviour
         settlementSucceeded = shiftInProgress;
         shiftInProgress = false;
         earnedWage = settlementSucceeded
-            ? BasePay + Mathf.Clamp(correctAnswers, 0, QuestionCount) * CorrectBonus
+            ? BasePay + correctAnswers * AnswerBonus
             : 0;
         if (settlementSucceeded)
             gameState.AddMoney(earnedWage);
@@ -356,6 +388,8 @@ public class MuseumWorkGame : MonoBehaviour
     private void HandleSecondary()
     {
         if (phase == Phase.Offer)
+            ReturnToDifficulty();
+        else if (phase == Phase.Difficulty)
             ClosePanel();
         else if (phase == Phase.ConfirmAbort)
         {
@@ -427,14 +461,30 @@ public class MuseumWorkGame : MonoBehaviour
 
         switch (phase)
         {
+            case Phase.Difficulty:
+                stageText.text = "CHOOSE SHIFT DIFFICULTY";
+                SetBodyLayout(112, 95);
+                bodyText.text = "Each shift picks three exhibits from the museum's guide notes.";
+                for (int i = 0; i < answerButtons.Length; i++)
+                {
+                    var difficulty = Difficulties[i];
+                    answerButtons[i].gameObject.SetActive(true);
+                    Label(
+                        answerButtons[i],
+                        $"{difficulty.Name}  |  {Mathf.CeilToInt(StudySeconds(i))} s  |  +£{difficulty.Bonus} per correct"
+                    );
+                }
+                primaryButton.gameObject.SetActive(false);
+                Label(secondaryButton, "Return to museum");
+                break;
             case Phase.Offer:
-                stageText.text = "SHIFT BRIEFING";
+                stageText.text = $"SHIFT BRIEFING  /  {Difficulties[difficultyIndex].Name.ToUpperInvariant()}";
                 bodyText.text =
                     "Help three visitors learn about the exhibits.\n\n"
-                    + "Study a short fact sheet, then answer three multiple-choice questions.\n\n"
+                    + $"Study for {Mathf.CeilToInt(StudySeconds(difficultyIndex))} seconds, then answer three multiple-choice questions.\n\n"
                     + $"Cost: {EnergyCost} energy, {SatietyCost} satiety"
                     + $" and {WorkMinutes / 60} game hours.\n"
-                    + $"Pay: £{BasePay} + £{CorrectBonus} per correct answer.\n\n"
+                    + $"Pay: £{BasePay} + £{AnswerBonus} per correct answer.\n\n"
                     + "Resources are spent only when you start the shift.";
                 Label(primaryButton, "Start shift");
                 Label(secondaryButton, "Back");
@@ -446,10 +496,10 @@ public class MuseumWorkGame : MonoBehaviour
                 memoryCards.SetActive(true);
                 countdownText.gameObject.SetActive(true);
                 countdownText.text = $"Fact sheet closes in {Mathf.CeilToInt(remainingSeconds)} s";
-                for (int i = 0; i < facts.Length; i++)
+                for (int i = 0; i < QuestionCount; i++)
                 {
-                    factTitles[i].text = facts[i].title;
-                    factDescriptions[i].text = facts[i].description;
+                    factTitles[i].text = shuffledFacts[i].title;
+                    factDescriptions[i].text = shuffledFacts[i].description;
                 }
                 Label(primaryButton, "I'm ready");
                 break;
@@ -460,9 +510,9 @@ public class MuseumWorkGame : MonoBehaviour
             case Phase.Result:
                 stageText.text = "SHIFT COMPLETE";
                 bodyText.text = settlementSucceeded
-                    ? $"You helped all three visitors.\n\nCorrect answers: {correctAnswers}/3\n\n"
+                    ? $"You helped all three visitors.\n\nCorrect answers: {correctAnswers}/{QuestionCount}\n\n"
                         + $"Basic wage: £{BasePay}\n"
-                        + $"Answer bonus: £{correctAnswers * CorrectBonus}\n\n"
+                        + $"Answer bonus: £{correctAnswers * AnswerBonus}\n\n"
                         + $"<size=34><b>Total earned: £{earnedWage}</b></size>"
                     : "This shift could not be settled. Return to the museum and try again.";
                 feedbackText.text = "Your time, energy and satiety were charged once at the start.";
@@ -483,9 +533,9 @@ public class MuseumWorkGame : MonoBehaviour
 
     private void RenderQuestion()
     {
-        stageText.text = $"VISITOR {questionIndex + 1} OF 3   /   {correctAnswers} CORRECT";
+        stageText.text = $"VISITOR {questionIndex + 1} OF {QuestionCount}   /   {correctAnswers} CORRECT";
         SetBodyLayout(112, 95);
-        bodyText.text = facts[questionOrder[questionIndex]].question;
+        bodyText.text = shuffledFacts[questionIndex].question;
         for (int i = 0; i < answerButtons.Length; i++)
         {
             answerButtons[i].gameObject.SetActive(true);
@@ -506,7 +556,7 @@ public class MuseumWorkGame : MonoBehaviour
                 ? "Correct! Well explained."
                 : $"The correct answer is {choices[correctChoiceIndex]}.";
             feedbackText.color = lastAnswerCorrect ? Success : Failure;
-            Label(primaryButton, questionIndex == 2 ? "Finish shift" : "Next visitor");
+            Label(primaryButton, questionIndex + 1 == QuestionCount ? "Finish shift" : "Next visitor");
         }
     }
 

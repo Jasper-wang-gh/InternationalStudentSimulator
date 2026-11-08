@@ -13090,23 +13090,41 @@ MonoBehaviour:
   memoriseSeconds: 10
   facts:
   - title: Avant Armour
-    description: Made in Milan, Italy, around 1440-1445. An early example of European plate armour.
+    description: Early plate armour made in Milan, Italy, around 1440-1445.
     question: 'A visitor asks: Which city was the Avant Armour made in?'
     correctAnswer: Milan
     wrongAnswerOne: Paris
     wrongAnswerTwo: Edinburgh
   - title: Alexander Reid
-    description: A portrait painted by Vincent van Gogh in 1887. Alexander Reid was an art dealer.
+    description: Vincent van Gogh painted art dealer Alexander Reid in 1887.
     question: 'A visitor asks: Who painted the portrait of Alexander Reid?'
     correctAnswer: Vincent van Gogh
     wrongAnswerOne: Claude Monet
     wrongAnswerTwo: Pablo Picasso
   - title: Shabti
-    description: A small funerary figurine from ancient Egypt. Glasgow Museums holds examples of these figures.
+    description: A small funerary figurine from ancient Egypt.
     question: 'A visitor asks: Which ancient civilisation made shabti figurines?'
     correctAnswer: Ancient Egypt
     wrongAnswerOne: Ancient Rome
     wrongAnswerTwo: Ancient Greece
+  - title: Dali's Christ
+    description: Dali painted this crucifixion above a coast in 1951.
+    question: 'A visitor asks: In what year did Dali paint Christ of St John of the Cross?'
+    correctAnswer: '1951'
+    wrongAnswerOne: '1931'
+    wrongAnswerTwo: '1971'
+  - title: Spitfire LA198
+    description: Built in 1944, this Spitfire flew with Glasgow's 602 Squadron.
+    question: 'A visitor asks: Which squadron flew Spitfire LA198?'
+    correctAnswer: '602 Squadron'
+    wrongAnswerOne: '601 Squadron'
+    wrongAnswerTwo: '603 Squadron'
+  - title: Sir Roger the Elephant
+    description: Sir Roger was an Asian elephant. Find him in the Life Gallery.
+    question: 'A visitor asks: What kind of elephant was Sir Roger?'
+    correctAnswer: Asian elephant
+    wrongAnswerOne: African bush elephant
+    wrongAnswerTwo: African forest elephant
 --- !u!114 &1068189652
 MonoBehaviour:
   m_ObjectHideFlags: 0
