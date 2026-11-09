@@ -9,6 +9,7 @@ public class StatusHUD : MonoBehaviour
     [SerializeField] private TMP_Text timeText;
     //钱
     [SerializeField] private TMP_Text moneyText;
+    [SerializeField] private TMP_Text stressText;
 
     [SerializeField] private Slider energyBar;
     [SerializeField] private TMP_Text energyText;
@@ -49,6 +50,8 @@ public class StatusHUD : MonoBehaviour
         //看余额
         if (moneyText != null)
             moneyText.text = $"Money: £{gameState.Money}";
+        if (stressText != null)
+            stressText.text = $"Stress: {gameState.Stress}/100";
     }
 
     private void SetStat(Slider bar, TMP_Text text, int value)

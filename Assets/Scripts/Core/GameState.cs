@@ -11,6 +11,12 @@ public class GameState : MonoBehaviour
     private int mood = 100;
 
     [SerializeField, Range(0, 100)]
+    private int stress;
+
+    private float stressMultiplier = 1f;
+    private bool backgroundChosen;
+
+    [SerializeField, Range(0, 100)]
     private int satiety = 100;
 
     [SerializeField, Range(0, 100)]
@@ -25,6 +31,7 @@ public class GameState : MonoBehaviour
 
     public int Energy => energy;
     public int Mood => mood;
+    public int Stress => stress;
     public int Satiety => satiety;
     public int CourseProgress => courseProgress;
 
@@ -33,6 +40,19 @@ public class GameState : MonoBehaviour
     public int TotalMinutes => totalMinutes;
 
     public event Action Changed;
+
+    public bool TryChooseStartingBackground(int startingMoney, float pressureMultiplier)
+    {
+        if (backgroundChosen || startingMoney < 0 || pressureMultiplier < 0f ||
+            float.IsNaN(pressureMultiplier) || float.IsInfinity(pressureMultiplier))
+            return false;
+
+        backgroundChosen = true;
+        money = startingMoney;
+        stressMultiplier = pressureMultiplier;
+        Changed?.Invoke();
+        return true;
+    }
 
     // Shared by activities that spend resources and advance the game clock.
     // Validate everything before applying any changes, then refresh the HUD once.
@@ -124,6 +144,9 @@ public class GameState : MonoBehaviour
         // 所有条件满足后，才统一结算。
         energy = Mathf.Clamp(energy - 15, 0, 100);
         mood = Mathf.Clamp(mood - 5, 0, 100);
+        const int studyStress = 8;
+        int stressGain = Mathf.RoundToInt(Mathf.Min(100, studyStress * stressMultiplier));
+        stress = Mathf.Min(100, stress + stressGain);
         satiety = Mathf.Clamp(satiety - 10, 0, 100);
 
         courseProgress = Mathf.Min(courseProgress + 10, 100);
@@ -148,6 +171,7 @@ public class GameState : MonoBehaviour
 
         energy = Mathf.Clamp(energy + 60, 0, 100);
         mood = Mathf.Clamp(mood + 15, 0, 100);
+        stress = Mathf.Max(0, stress - 15);
         satiety = Mathf.Clamp(satiety - 20, 0, 100);
 
         totalMinutes += 8 * 60;
